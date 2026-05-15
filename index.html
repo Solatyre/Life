@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>FamilyCircle — Family Safety</title>
+<link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --card: #1c1c26;
+    --border: rgba(255,255,255,0.07);
+    --accent: #00c896;
+    --accent2: #0091ff;
+    --danger: #ff4d4d;
+    --warn: #ffb830;
+    --text: #f0f0f5;
+    --muted: #7070a0;
+    --radius: 18px;
+    --safe: #00c896;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, 'SF Pro Display', BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    max-width: 430px;
+    margin: 0 auto;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+/* STATUS BAR */
+.status-bar {
+display: flex; justify-content: space-between; align-items: center;
+padding: 14px 22px 0;
+font-size: 12px; font-weight: 600; color: var(–text);
+position: sticky; top: 0; z-index: 100;
+background: var(–bg);
+}
+.status-bar .time { font-size: 15px; font-weight: 700; }
+.status-icons { display: flex; gap: 6px; align-items: center; }
+.status-icons svg { width: 16px; height: 16px; fill: var(–text); }
+
+/* NAV */
+.nav {
+display: flex; justify-content: space-around; align-items: center;
+padding: 10px 0 28px;
+position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+width: 100%; max-width: 430px;
+background: rgba(13,13,20,0.92);
+backdrop-filter: blur(20px);
+border-top: 1px solid var(–border);
+z-index: 100;
+}
+.nav-item {
+display: flex; flex-direction: column; align-items: center; gap: 4px;
+cursor: pointer; transition: all 0.2s; flex: 1;
+padding: 6px 0;
+}
+.nav-item.active .nav-icon { color: var(–accent); }
+.nav-item.active .nav-label { color: var(–accent); }
+.nav-icon { font-size: 22px; color: var(–muted); transition: color 0.2s; }
+.nav-label { font-size: 10px; font-weight: 600; color: var(–muted); letter-spacing: 0.3px; }
+
+/* SCREENS */
+.screen { display: none; padding: 16px 16px 100px; animation: fadeIn 0.3s ease; }
+.screen.active { display: block; }
+@keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+
+/* HEADER */
+.page-header {
+display: flex; justify-content: space-between; align-items: center;
+margin-bottom: 20px; padding: 4px 0;
+}
+.page-title { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+.header-btn {
+width: 38px; height: 38px; border-radius: 50%;
+background: var(–card); border: 1px solid var(–border);
+display: flex; align-items: center; justify-content: center;
+cursor: pointer; font-size: 18px;
+}
+
+/* MAP SCREEN */
+.map-container {
+border-radius: var(–radius); overflow: hidden;
+height: 340px; position: relative;
+background: var(–card); border: 1px solid var(–border);
+margin-bottom: 16px;
+}
+.map-bg {
+width: 100%; height: 100%;
+background:
+radial-gradient(ellipse at 30% 40%, rgba(0,200,150,0.08) 0%, transparent 60%),
+radial-gradient(ellipse at 70% 60%, rgba(0,145,255,0.08) 0%, transparent 50%),
+linear-gradient(180deg, #0d1117 0%, #111820 100%);
+position: relative; overflow: hidden;
+}
+/* Subtle grid */
+.map-bg::before {
+content: ‘’;
+position: absolute; inset: 0;
+background-image:
+linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+background-size: 40px 40px;
+}
+/* Roads */
+.road { position: absolute; background: rgba(255,255,255,0.06); border-radius: 2px; }
+.road-h { height: 3px; }
+.road-v { width: 3px; }
+.road-main { background: rgba(255,255,255,0.1); }
+
+.map-pin {
+position: absolute;
+display: flex; flex-direction: column; align-items: center;
+cursor: pointer; transition: transform 0.2s;
+z-index: 10;
+}
+.map-pin:hover { transform: scale(1.1); }
+.map-pin.active { z-index: 20; }
+.pin-avatar {
+width: 44px; height: 44px; border-radius: 50%;
+border: 3px solid var(–accent);
+display: flex; align-items: center; justify-content: center;
+font-size: 20px; font-weight: 700;
+position: relative; overflow: hidden;
+box-shadow: 0 0 0 2px rgba(0,200,150,0.3), 0 4px 16px rgba(0,0,0,0.5);
+}
+.pin-avatar.you { border-color: var(–accent2); box-shadow: 0 0 0 2px rgba(0,145,255,0.3), 0 4px 16px rgba(0,0,0,0.5); }
+.pin-avatar.driving { border-color: var(–warn); box-shadow: 0 0 0 2px rgba(255,184,48,0.3), 0 4px 16px rgba(0,0,0,0.5); }
+.pin-tail {
+width: 3px; height: 10px;
+background: linear-gradient(var(–accent), transparent);
+border-radius: 2px;
+}
+.pin-avatar.you + .pin-tail { background: linear-gradient(var(–accent2), transparent); }
+.pin-avatar.driving + .pin-tail { background: linear-gradient(var(–warn), transparent); }
+.pin-name {
+font-size: 11px; font-weight: 700;
+background: rgba(13,13,20,0.9); color: var(–text);
+padding: 2px 7px; border-radius: 10px;
+border: 1px solid var(–border);
+margin-top: 2px; white-space: nowrap;
+}
+.pulse-ring {
+position: absolute; inset: -6px; border-radius: 50%;
+border: 2px solid rgba(0,145,255,0.4);
+animation: pulse 2s infinite;
+}
+@keyframes pulse {
+0% { transform: scale(0.9); opacity: 1; }
+100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* Map controls */
+.map-controls {
+position: absolute; right: 12px; bottom: 12px;
+display: flex; flex-direction: column; gap: 8px;
+}
+.map-btn {
+width: 36px; height: 36px; border-radius: 10px;
+background: rgba(13,13,20,0.9); border: 1px solid var(–border);
+display: flex; align-items: center; justify-content: center;
+font-size: 18px; cursor: pointer;
+backdrop-filter: blur(10px);
+transition: background 0.2s;
+}
+.map-btn:active { background: var(–card); }
+
+/* SOS Button */
+.sos-btn {
+position: absolute; left: 12px; bottom: 12px;
+background: var(–danger); color: white;
+border: none; border-radius: 20px;
+padding: 8px 16px; font-size: 13px; font-weight: 800;
+letter-spacing: 1px; cursor: pointer;
+box-shadow: 0 4px 20px rgba(255,77,77,0.4);
+transition: transform 0.15s;
+}
+.sos-btn:active { transform: scale(0.95); }
+
+/* Circle header card */
+.circle-header {
+background: linear-gradient(135deg, rgba(0,200,150,0.15), rgba(0,145,255,0.1));
+border: 1px solid rgba(0,200,150,0.2);
+border-radius: var(–radius); padding: 16px;
+display: flex; align-items: center; gap: 12px;
+margin-bottom: 14px;
+}
+.circle-icon { font-size: 32px; }
+.circle-info h3 { font-size: 17px; font-weight: 700; }
+.circle-info p { font-size: 12px; color: var(–muted); margin-top: 2px; }
+.circle-badge {
+margin-left: auto; background: var(–accent); color: #000;
+font-size: 11px; font-weight: 800; padding: 4px 10px;
+border-radius: 20px;
+}
+
+/* Member cards */
+.member-card {
+background: var(–card); border: 1px solid var(–border);
+border-radius: 16px; padding: 14px; margin-bottom: 10px;
+cursor: pointer; transition: all 0.2s; position: relative;
+overflow: hidden;
+}
+.member-card::before {
+content: ‘’; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+background: var(–accent); border-radius: 3px 0 0 3px;
+transition: opacity 0.2s;
+}
+.member-card.driving::before { background: var(–warn); }
+.member-card.offline::before { background: var(–muted); }
+.member-card:active { transform: scale(0.98); }
+.member-top { display: flex; align-items: center; gap: 12px; }
+.member-avatar {
+width: 48px; height: 48px; border-radius: 50%;
+display: flex; align-items: center; justify-content: center;
+font-size: 22px; font-weight: 700; flex-shrink: 0;
+position: relative;
+}
+.member-avatar .status-dot {
+position: absolute; bottom: 2px; right: 2px;
+width: 12px; height: 12px; border-radius: 50%;
+border: 2px solid var(–card);
+}
+.member-details { flex: 1; min-width: 0; }
+.member-name { font-size: 16px; font-weight: 700; }
+.member-loc { font-size: 12px; color: var(–muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.member-time { font-size: 11px; color: var(–muted); }
+.member-stats {
+display: flex; gap: 10px; margin-top: 12px; padding-top: 12px;
+border-top: 1px solid var(–border);
+}
+.stat-chip {
+display: flex; align-items: center; gap: 5px;
+background: rgba(255,255,255,0.04); border-radius: 8px;
+padding: 5px 10px; font-size: 11px; font-weight: 600;
+}
+.stat-chip span { color: var(–muted); }
+.battery-bar {
+display: flex; align-items: center; gap: 5px;
+font-size: 11px; font-weight: 600;
+}
+.battery-icon { font-size: 14px; }
+
+/* ALERTS SCREEN */
+.alert-card {
+background: var(–card); border: 1px solid var(–border);
+border-radius: 16px; padding: 14px; margin-bottom: 10px;
+display: flex; align-items: flex-start; gap: 12px;
+}
+.alert-icon {
+width: 40px; height: 40px; border-radius: 12px;
+display: flex; align-items: center; justify-content: center;
+font-size: 20px; flex-shrink: 0;
+}
+.alert-icon.green { background: rgba(0,200,150,0.15); }
+.alert-icon.blue { background: rgba(0,145,255,0.15); }
+.alert-icon.warn { background: rgba(255,184,48,0.15); }
+.alert-icon.red { background: rgba(255,77,77,0.15); }
+.alert-body { flex: 1; }
+.alert-title { font-size: 14px; font-weight: 700; }
+.alert-desc { font-size: 12px; color: var(–muted); margin-top: 3px; line-height: 1.5; }
+.alert-time { font-size: 11px; color: var(–muted); margin-top: 4px; }
+
+/* DRIVING SCREEN */
+.drive-summary {
+background: linear-gradient(135deg, var(–card), rgba(255,184,48,0.08));
+border: 1px solid rgba(255,184,48,0.2); border-radius: var(–radius);
+padding: 20px; margin-bottom: 14px; text-align: center;
+}
+.drive-score {
+font-size: 72px; font-weight: 800; line-height: 1;
+background: linear-gradient(135deg, var(–warn), #ff8c00);
+-webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.drive-label { font-size: 13px; color: var(–muted); margin-top: 4px; font-weight: 600; }
+.drive-grade { font-size: 20px; font-weight: 700; margin-top: 8px; }
+
+.metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.metric-card {
+background: var(–card); border: 1px solid var(–border);
+border-radius: 16px; padding: 16px;
+}
+.metric-icon { font-size: 24px; margin-bottom: 8px; }
+.metric-value { font-size: 24px; font-weight: 800; }
+.metric-label { font-size: 11px; color: var(–muted); margin-top: 2px; font-weight: 600; }
+
+/* PLACES SCREEN */
+.place-card {
+background: var(–card); border: 1px solid var(–border);
+border-radius: 16px; padding: 14px; margin-bottom: 10px;
+display: flex; align-items: center; gap: 12px; cursor: pointer;
+transition: all 0.2s;
+}
+.place-card:active { transform: scale(0.98); }
+.place-icon {
+width: 48px; height: 48px; border-radius: 14px;
+display: flex; align-items: center; justify-content: center;
+font-size: 24px; flex-shrink: 0;
+}
+.place-icon.home { background: rgba(0,200,150,0.15); }
+.place-icon.work { background: rgba(0,145,255,0.15); }
+.place-icon.school { background: rgba(160,90,255,0.15); }
+.place-icon.custom { background: rgba(255,184,48,0.15); }
+.place-info { flex: 1; }
+.place-name { font-size: 15px; font-weight: 700; }
+.place-addr { font-size: 12px; color: var(–muted); margin-top: 2px; }
+.place-toggle {
+width: 48px; height: 28px; border-radius: 14px;
+background: var(–accent); position: relative; cursor: pointer;
+transition: background 0.2s; flex-shrink: 0;
+}
+.place-toggle.off { background: rgba(255,255,255,0.1); }
+.place-toggle::after {
+content: ‘’; position: absolute;
+width: 22px; height: 22px; border-radius: 50%;
+background: white; top: 3px; left: 3px;
+transition: transform 0.2s;
+box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+.place-toggle:not(.off)::after { transform: translateX(20px); }
+
+/* ADD PLACE BTN */
+.add-btn {
+width: 100%; padding: 14px;
+background: rgba(0,200,150,0.1); border: 1px dashed rgba(0,200,150,0.3);
+border-radius: 16px; color: var(–accent);
+font-size: 15px; font-weight: 700; cursor: pointer;
+display: flex; align-items: center; justify-content: center; gap: 8px;
+transition: all 0.2s; margin-bottom: 10px;
+}
+.add-btn:active { transform: scale(0.98); }
+
+/* SECTION LABEL */
+.section-label {
+font-size: 12px; font-weight: 700; color: var(–muted);
+letter-spacing: 0.8px; text-transform: uppercase;
+margin: 18px 0 10px; padding: 0 2px;
+}
+
+/* GOLD BANNER */
+.gold-banner {
+background: linear-gradient(135deg, #1a1200, #2a1e00);
+border: 1px solid rgba(255,184,48,0.3);
+border-radius: var(–radius); padding: 16px;
+display: flex; align-items: center; gap: 12px;
+margin-bottom: 14px;
+}
+.gold-crown { font-size: 32px; }
+.gold-info h3 { font-size: 15px; font-weight: 700; color: var(–warn); }
+.gold-info p { font-size: 12px; color: rgba(255,184,48,0.6); margin-top: 2px; }
+.gold-badge {
+margin-left: auto; background: var(–warn); color: #000;
+font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 20px;
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 0; }
+
+/* Notch area */
+.notch { height: 10px; }
+
+/* CHIP TABS */
+.chip-tabs { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 2px; }
+.chip-tab {
+padding: 7px 16px; border-radius: 20px; font-size: 13px; font-weight: 700;
+white-space: nowrap; cursor: pointer; transition: all 0.2s;
+background: var(–card); border: 1px solid var(–border); color: var(–muted);
+}
+.chip-tab.active { background: var(–accent); color: #000; border-color: var(–accent); }
+
+/* HISTORY TIMELINE */
+.timeline { position: relative; padding-left: 24px; }
+.timeline::before {
+content: ‘’; position: absolute; left: 7px; top: 0; bottom: 0;
+width: 2px; background: var(–border);
+}
+.timeline-item { position: relative; margin-bottom: 16px; }
+.timeline-dot {
+position: absolute; left: -21px; top: 4px;
+width: 10px; height: 10px; border-radius: 50%;
+background: var(–accent); border: 2px solid var(–bg);
+}
+.timeline-dot.drive { background: var(–warn); }
+.timeline-dot.home { background: var(–accent2); }
+.timeline-title { font-size: 14px; font-weight: 700; }
+.timeline-detail { font-size: 12px; color: var(–muted); margin-top: 2px; }
+</style>
+
+</head>
+<body>
+
+<!-- STATUS BAR -->
+
+<div class="status-bar">
+  <span class="time" id="clock">9:41</span>
+  <div class="status-icons">
+    <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+    <svg viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+  </div>
+</div>
+
+<!-- MAP SCREEN -->
+
+<div class="screen active" id="screen-map">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Family Map</div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <div class="header-btn">🔔</div>
+      <div class="header-btn">⚙️</div>
+    </div>
+  </div>
+
+  <div class="gold-banner">
+    <div class="gold-crown">👑</div>
+    <div class="gold-info">
+      <h3>FamilyCircle Gold</h3>
+      <p>All Gold features unlocked</p>
+    </div>
+    <div class="gold-badge">GOLD</div>
+  </div>
+
+  <!-- MAP -->
+
+  <div class="map-container">
+    <div class="map-bg">
+      <!-- Roads -->
+      <div class="road road-h road-main" style="top:45%;left:0;right:0;"></div>
+      <div class="road road-h" style="top:25%;left:0;right:0;"></div>
+      <div class="road road-h" style="top:65%;left:0;right:0;"></div>
+      <div class="road road-v road-main" style="left:35%;top:0;bottom:0;"></div>
+      <div class="road road-v" style="left:60%;top:0;bottom:0;"></div>
+      <div class="road road-v" style="left:15%;top:0;bottom:0;"></div>
+
+```
+  <!-- YOU pin -->
+  <div class="map-pin active" style="left:30%;top:38%;">
+    <div class="pin-avatar you">
+      <div class="pulse-ring"></div>
+      🧑
+    </div>
+    <div class="pin-tail"></div>
+    <div class="pin-name">You</div>
+  </div>
+
+  <!-- Mom pin -->
+  <div class="map-pin" style="left:52%;top:22%;" onclick="selectMember('mom')">
+    <div class="pin-avatar">👩</div>
+    <div class="pin-tail"></div>
+    <div class="pin-name">Mom</div>
+  </div>
+
+  <!-- Dad driving pin -->
+  <div class="map-pin" style="left:68%;top:54%;" onclick="selectMember('dad')">
+    <div class="pin-avatar driving">👨</div>
+    <div class="pin-tail"></div>
+    <div class="pin-name">Dad 🚗</div>
+  </div>
+
+  <!-- Sister pin -->
+  <div class="map-pin" style="left:20%;top:58%;" onclick="selectMember('sister')">
+    <div class="pin-avatar">👧</div>
+    <div class="pin-tail"></div>
+    <div class="pin-name">Emma</div>
+  </div>
+</div>
+<div class="map-controls">
+  <div class="map-btn">+</div>
+  <div class="map-btn">−</div>
+  <div class="map-btn">📍</div>
+</div>
+<button class="sos-btn">🆘 SOS</button>
+```
+
+  </div>
+
+  <!-- Circle -->
+
+  <div class="circle-header">
+    <div class="circle-icon">⭕</div>
+    <div class="circle-info">
+      <h3>The Johnson Family</h3>
+      <p>4 members • All safe</p>
+    </div>
+    <div class="circle-badge">✓ Safe</div>
+  </div>
+
+  <!-- Members -->
+
+  <div class="section-label">Circle Members</div>
+
+  <div class="member-card" onclick="showMemberDetail('You','🧑','Home','Just now','98%','you')">
+    <div class="member-top">
+      <div class="member-avatar" style="background:rgba(0,145,255,0.15);">
+        🧑<div class="status-dot" style="background:var(--accent2)"></div>
+      </div>
+      <div class="member-details">
+        <div class="member-name">You</div>
+        <div class="member-loc">📍 Home — 123 Maple St</div>
+        <div class="member-time">Updated just now</div>
+      </div>
+      <div class="battery-bar">
+        <span class="battery-icon">🔋</span>
+        <span>98%</span>
+      </div>
+    </div>
+    <div class="member-stats">
+      <div class="stat-chip">📶 <span>Strong GPS</span></div>
+      <div class="stat-chip">🏠 <span>Home</span></div>
+      <div class="stat-chip">✅ <span>Safe</span></div>
+    </div>
+  </div>
+
+  <div class="member-card" onclick="showMemberDetail('Mom','👩','Work','3 min ago','67%','')">
+    <div class="member-top">
+      <div class="member-avatar" style="background:rgba(0,200,150,0.15);">
+        👩<div class="status-dot" style="background:var(--accent)"></div>
+      </div>
+      <div class="member-details">
+        <div class="member-name">Mom</div>
+        <div class="member-loc">📍 Work — 500 Business Ave</div>
+        <div class="member-time">Updated 3 min ago</div>
+      </div>
+      <div class="battery-bar">
+        <span class="battery-icon">🔋</span>
+        <span>67%</span>
+      </div>
+    </div>
+    <div class="member-stats">
+      <div class="stat-chip">📶 <span>Strong GPS</span></div>
+      <div class="stat-chip">💼 <span>Work</span></div>
+      <div class="stat-chip">✅ <span>Safe</span></div>
+    </div>
+  </div>
+
+  <div class="member-card driving" onclick="showMemberDetail('Dad','👨','Driving on I-95','1 min ago','42%','driving')">
+    <div class="member-top">
+      <div class="member-avatar" style="background:rgba(255,184,48,0.15);">
+        👨<div class="status-dot" style="background:var(--warn)"></div>
+      </div>
+      <div class="member-details">
+        <div class="member-name">Dad 🚗</div>
+        <div class="member-loc">🚗 Driving — I-95 North, 47 mph</div>
+        <div class="member-time">Updated 1 min ago</div>
+      </div>
+      <div class="battery-bar">
+        <span class="battery-icon">🪫</span>
+        <span style="color:var(--warn)">42%</span>
+      </div>
+    </div>
+    <div class="member-stats">
+      <div class="stat-chip">📶 <span>Strong GPS</span></div>
+      <div class="stat-chip" style="color:var(--warn)">🚗 <span>47 mph</span></div>
+      <div class="stat-chip">📱 <span>Phone down</span></div>
+    </div>
+  </div>
+
+  <div class="member-card" onclick="showMemberDetail('Emma','👧','Lincoln High School','15 min ago','88%','')">
+    <div class="member-top">
+      <div class="member-avatar" style="background:rgba(160,90,255,0.15);">
+        👧<div class="status-dot" style="background:#a05aff"></div>
+      </div>
+      <div class="member-details">
+        <div class="member-name">Emma</div>
+        <div class="member-loc">📍 School — Lincoln High School</div>
+        <div class="member-time">Updated 15 min ago</div>
+      </div>
+      <div class="battery-bar">
+        <span class="battery-icon">🔋</span>
+        <span>88%</span>
+      </div>
+    </div>
+    <div class="member-stats">
+      <div class="stat-chip">📶 <span>Moderate GPS</span></div>
+      <div class="stat-chip" style="color:#a05aff">🎒 <span>School</span></div>
+      <div class="stat-chip">✅ <span>Safe</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ALERTS SCREEN -->
+
+<div class="screen" id="screen-alerts">
+  <div class="page-header">
+    <div class="page-title">Alerts</div>
+    <div class="header-btn">⚙️</div>
+  </div>
+
+  <div class="chip-tabs">
+    <div class="chip-tab active">All</div>
+    <div class="chip-tab">Arrivals</div>
+    <div class="chip-tab">Driving</div>
+    <div class="chip-tab">SOS</div>
+  </div>
+
+  <div class="section-label">Today</div>
+
+  <div class="alert-card">
+    <div class="alert-icon green">🏠</div>
+    <div class="alert-body">
+      <div class="alert-title">Emma arrived at Home</div>
+      <div class="alert-desc">Emma arrived safely at home after school.</div>
+      <div class="alert-time">Today, 3:42 PM</div>
+    </div>
+  </div>
+
+  <div class="alert-card">
+    <div class="alert-icon warn">🚗</div>
+    <div class="alert-body">
+      <div class="alert-title">Dad is driving</div>
+      <div class="alert-desc">Dad started driving from Work. Speed: 47 mph. Phone is face down ✓</div>
+      <div class="alert-time">Today, 5:15 PM</div>
+    </div>
+  </div>
+
+  <div class="alert-card">
+    <div class="alert-icon blue">💼</div>
+    <div class="alert-body">
+      <div class="alert-title">Mom arrived at Work</div>
+      <div class="alert-desc">Mom checked into Work at 500 Business Ave.</div>
+      <div class="alert-time">Today, 9:03 AM</div>
+    </div>
+  </div>
+
+  <div class="alert-card">
+    <div class="alert-icon green">🎒</div>
+    <div class="alert-body">
+      <div class="alert-title">Emma arrived at School</div>
+      <div class="alert-desc">Emma arrived at Lincoln High School on time.</div>
+      <div class="alert-time">Today, 7:58 AM</div>
+    </div>
+  </div>
+
+  <div class="section-label">Yesterday</div>
+
+  <div class="alert-card">
+    <div class="alert-icon red">⚡</div>
+    <div class="alert-body">
+      <div class="alert-title">Hard Brake Detected — Dad</div>
+      <div class="alert-desc">A hard brake event was detected on Oak Street. No crash detected.</div>
+      <div class="alert-time">Yesterday, 6:44 PM</div>
+    </div>
+  </div>
+
+  <div class="alert-card">
+    <div class="alert-icon warn">🔋</div>
+    <div class="alert-body">
+      <div class="alert-title">Low Battery — Emma</div>
+      <div class="alert-desc">Emma's phone battery was at 15%.</div>
+      <div class="alert-time">Yesterday, 4:30 PM</div>
+    </div>
+  </div>
+</div>
+
+<!-- DRIVING SCREEN -->
+
+<div class="screen" id="screen-driving">
+  <div class="page-header">
+    <div class="page-title">Drive Reports</div>
+    <div class="header-btn">📅</div>
+  </div>
+
+  <div class="chip-tabs">
+    <div class="chip-tab active">Dad</div>
+    <div class="chip-tab">Mom</div>
+    <div class="chip-tab">Emma</div>
+    <div class="chip-tab">You</div>
+  </div>
+
+  <div class="drive-summary">
+    <div class="drive-score" id="drive-score">83</div>
+    <div class="drive-label">DRIVING SCORE THIS WEEK</div>
+    <div class="drive-grade">Good Driver 👍</div>
+  </div>
+
+  <div class="metrics-grid">
+    <div class="metric-card">
+      <div class="metric-icon">🚗</div>
+      <div class="metric-value">142</div>
+      <div class="metric-label">Miles Driven</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-icon">⚡</div>
+      <div class="metric-value">3</div>
+      <div class="metric-label">Hard Brakes</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-icon">📱</div>
+      <div class="metric-value">92%</div>
+      <div class="metric-label">Phone-Free</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-icon">🏎️</div>
+      <div class="metric-value">2</div>
+      <div class="metric-label">Speeding Events</div>
+    </div>
+  </div>
+
+  <div class="section-label">Recent Trips</div>
+
+  <div class="alert-card" style="flex-direction:column;gap:8px;">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="alert-icon warn">🚗</div>
+      <div class="alert-body">
+        <div class="alert-title">Work → Home</div>
+        <div class="alert-desc">14.2 miles · 28 min · Score: 91 🌟</div>
+        <div class="alert-time">Today, 5:15 PM</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert-card">
+    <div class="alert-icon warn">🚗</div>
+    <div class="alert-body">
+      <div class="alert-title">Home → Work</div>
+      <div class="alert-desc">13.8 miles · 31 min · Score: 78 ⚠️ 1 hard brake</div>
+      <div class="alert-time">Today, 8:10 AM</div>
+    </div>
+  </div>
+
+  <div class="alert-card">
+    <div class="alert-icon warn">🚗</div>
+    <div class="alert-body">
+      <div class="alert-title">Grocery Store → Home</div>
+      <div class="alert-desc">4.1 miles · 9 min · Score: 96 🌟 Perfect drive</div>
+      <div class="alert-time">Yesterday, 7:00 PM</div>
+    </div>
+  </div>
+</div>
+
+<!-- PLACES SCREEN -->
+
+<div class="screen" id="screen-places">
+  <div class="page-header">
+    <div class="page-title">Places</div>
+    <div class="header-btn">＋</div>
+  </div>
+
+  <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5;">Get notified when family members arrive or leave saved places.</p>
+
+  <div class="place-card">
+    <div class="place-icon home">🏠</div>
+    <div class="place-info">
+      <div class="place-name">Home</div>
+      <div class="place-addr">123 Maple Street</div>
+    </div>
+    <div class="place-toggle" onclick="this.classList.toggle('off')"></div>
+  </div>
+
+  <div class="place-card">
+    <div class="place-icon work">💼</div>
+    <div class="place-info">
+      <div class="place-name">Work</div>
+      <div class="place-addr">500 Business Avenue</div>
+    </div>
+    <div class="place-toggle" onclick="this.classList.toggle('off')"></div>
+  </div>
+
+  <div class="place-card">
+    <div class="place-icon school">🎒</div>
+    <div class="place-info">
+      <div class="place-name">School</div>
+      <div class="place-addr">Lincoln High School</div>
+    </div>
+    <div class="place-toggle" onclick="this.classList.toggle('off')"></div>
+  </div>
+
+  <div class="place-card">
+    <div class="place-icon custom">🏋️</div>
+    <div class="place-info">
+      <div class="place-name">Gym</div>
+      <div class="place-addr">Planet Fitness, Oak Blvd</div>
+    </div>
+    <div class="place-toggle off" onclick="this.classList.toggle('off')"></div>
+  </div>
+
+  <div class="add-btn" onclick="showAddPlace()">＋ Add a Place</div>
+
+  <div class="section-label">Location History — Emma</div>
+  <div class="timeline">
+    <div class="timeline-item">
+      <div class="timeline-dot home"></div>
+      <div class="timeline-title">🏠 Arrived Home</div>
+      <div class="timeline-detail">Today 3:42 PM · 15 min from school</div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-dot drive"></div>
+      <div class="timeline-title">🚗 Left School</div>
+      <div class="timeline-detail">Today 3:27 PM · Passenger in car</div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-dot"></div>
+      <div class="timeline-title">🎒 At School</div>
+      <div class="timeline-detail">Today 7:58 AM – 3:27 PM · 7h 29m</div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-dot drive"></div>
+      <div class="timeline-title">🚌 Left Home</div>
+      <div class="timeline-detail">Today 7:41 AM · School bus</div>
+    </div>
+  </div>
+</div>
+
+<!-- NAV BAR -->
+
+<nav class="nav">
+  <div class="nav-item active" onclick="switchTab('map', this)">
+    <div class="nav-icon">🗺️</div>
+    <div class="nav-label">Map</div>
+  </div>
+  <div class="nav-item" onclick="switchTab('alerts', this)">
+    <div class="nav-icon">🔔</div>
+    <div class="nav-label">Alerts</div>
+  </div>
+  <div class="nav-item" onclick="switchTab('driving', this)">
+    <div class="nav-icon">🚗</div>
+    <div class="nav-label">Driving</div>
+  </div>
+  <div class="nav-item" onclick="switchTab('places', this)">
+    <div class="nav-icon">📍</div>
+    <div class="nav-label">Places</div>
+  </div>
+</nav>
+
+<!-- MEMBER DETAIL MODAL -->
+
+<div id="modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);align-items:flex-end;" onclick="closeModal(event)">
+  <div id="modal-sheet" style="background:var(--surface);border-radius:28px 28px 0 0;padding:20px 20px 40px;width:100%;max-width:430px;margin:0 auto;border:1px solid var(--border);border-bottom:none;animation:slideUp 0.3s ease;">
+    <div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px;"></div>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<style>
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+</style>
+
+<script>
+// Clock
+function updateClock() {
+  const now = new Date();
+  const h = now.getHours() % 12 || 12;
+  const m = String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('clock').textContent = `${h}:${m}`;
+}
+updateClock(); setInterval(updateClock, 10000);
+
+// Tab switching
+function switchTab(name, el) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  el.classList.add('active');
+}
+
+// Member detail modal
+const memberData = {
+  you: { color: 'rgba(0,145,255,0.15)', borderColor: 'var(--accent2)', statusColor: 'var(--accent2)', trips: 'Stayed home all day', speed: '—', battery: '98%', status: 'At Home' },
+  mom: { color: 'rgba(0,200,150,0.15)', borderColor: 'var(--accent)', statusColor: 'var(--accent)', trips: '2 trips today', speed: '0 mph', battery: '67%', status: 'At Work' },
+  dad: { color: 'rgba(255,184,48,0.15)', borderColor: 'var(--warn)', statusColor: 'var(--warn)', trips: '3 trips today', speed: '47 mph', battery: '42%', status: 'Driving' },
+  sister: { color: 'rgba(160,90,255,0.15)', borderColor: '#a05aff', statusColor: '#a05aff', trips: '1 trip today', speed: '0 mph', battery: '88%', status: 'At School' },
+};
+
+function showMemberDetail(name, emoji, loc, updated, battery, type) {
+  const d = memberData[type || name.toLowerCase()] || memberData.mom;
+  document.getElementById('modal-content').innerHTML = `
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
+      <div style="width:64px;height:64px;border-radius:50%;background:${d.color};border:3px solid ${d.borderColor};display:flex;align-items:center;justify-content:center;font-size:32px;">${emoji}</div>
+      <div>
+        <div style="font-size:22px;font-weight:800;">${name}</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:2px;">📍 ${loc}</div>
+        <div style="font-size:11px;color:var(--muted);">Updated ${updated}</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px;">
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center;">
+        <div style="font-size:20px;">🔋</div>
+        <div style="font-size:18px;font-weight:800;margin-top:4px;">${battery}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px;">Battery</div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center;">
+        <div style="font-size:20px;">🚗</div>
+        <div style="font-size:18px;font-weight:800;margin-top:4px;">${d.speed}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px;">Speed</div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center;">
+        <div style="font-size:20px;">✅</div>
+        <div style="font-size:14px;font-weight:800;margin-top:4px;">${d.status}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px;">Status</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button style="flex:1;padding:14px;background:var(--accent);color:#000;border:none;border-radius:14px;font-size:14px;font-weight:800;cursor:pointer;" onclick="closeModal()">📞 Call</button>
+      <button style="flex:1;padding:14px;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;" onclick="closeModal()">💬 Message</button>
+    </div>
+  `;
+  document.getElementById('modal').style.display = 'flex';
+}
+
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('modal')) {
+    document.getElementById('modal').style.display = 'none';
+  }
+}
+
+function showAddPlace() {
+  document.getElementById('modal-content').innerHTML = `
+    <div style="font-size:20px;font-weight:800;margin-bottom:16px;">Add a Place</div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      ${['🏥 Hospital','🏪 Mall','⛽ Gas Station','🌿 Park','🍕 Restaurant'].map(p => `
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;cursor:pointer;font-size:14px;font-weight:600;" onclick="closeModal()">${p}</div>
+      `).join('')}
+      <div style="background:rgba(0,200,150,0.1);border:1px dashed rgba(0,200,150,0.3);border-radius:14px;padding:14px;cursor:pointer;font-size:14px;font-weight:700;color:var(--accent);text-align:center;" onclick="closeModal()">📍 Pick on Map</div>
+    </div>
+  `;
+  document.getElementById('modal').style.display = 'flex';
+}
+
+// Animate drive score
+let scoreAnim = 0;
+const target = 83;
+const scoreEl = document.getElementById('drive-score');
+function animScore() {
+  if (scoreAnim < target) {
+    scoreAnim += 2;
+    scoreEl.textContent = Math.min(scoreAnim, target);
+    requestAnimationFrame(animScore);
+  }
+}
+setTimeout(animScore, 500);
+
+// Simulate live location update
+let drivingOffset = 0;
+setInterval(() => {
+  drivingOffset += 0.3;
+  const pin = document.querySelectorAll('.map-pin')[2];
+  if (pin) {
+    const base = 54 + Math.sin(drivingOffset * 0.2) * 3;
+    pin.style.top = base + '%';
+  }
+}, 200);
+</script>
+
+</body>
+</html>
